@@ -94,10 +94,8 @@ class TestCommands(unittest.TestCase):
 
     def test_version(self):
         old_app = os.environ.get("APP_VERSION")
-        old_sha = os.environ.get("GIT_SHA")
         try:
             os.environ["APP_VERSION"] = "v10"
-            os.environ["GIT_SHA"] = "abcdef123"
             self.updater.dispatcher.add_handler(CommandHandler("version", command_version))
             update = self.mg.get_message(text="/version", parse_mode="Markdown")
             self.updater.dispatcher.process_update(update)
@@ -106,16 +104,11 @@ class TestCommands(unittest.TestCase):
             self.assertEqual(sent['method'], "sendMessage")
             self.assertIn("\u0646\u0633\u062e\u0647", sent['text'])
             self.assertIn("v10", sent['text'])
-            self.assertIn("abcdef123", sent['text'])
         finally:
             if old_app is None:
                 os.environ.pop("APP_VERSION", None)
             else:
                 os.environ["APP_VERSION"] = old_app
-            if old_sha is None:
-                os.environ.pop("GIT_SHA", None)
-            else:
-                os.environ["GIT_SHA"] = old_sha
 
 
     def test_board_when_there_is_no_game(self):

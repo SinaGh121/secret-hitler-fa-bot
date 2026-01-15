@@ -77,3 +77,8 @@ Consequences: New bytecode files will be ignored, but already-tracked artifacts 
 Context: The `Rules/Secret-Hitler-Online-development/` folder is only a reference source tree and can be noisy in the repo.
 Decision: Add `Rules/Secret-Hitler-Online-development/` to `.gitignore` while keeping `Rules/Secret_Hitler_Rules_Detailed.md` tracked.
 Consequences: Reference sources stay untracked; the detailed rules doc remains versioned.
+
+## 2026-01-15 - Simplify /version output
+Context: The user only needs the bot version and does not want image refs or commit IDs in the `/version` response.
+Decision: Make `/version` report only `APP_VERSION` (with a fallback if unset) and update the tests/docs accordingly.
+Consequences: Deploy metadata like commit SHA or image ref is no longer shown in the bot response.

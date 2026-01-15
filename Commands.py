@@ -106,19 +106,10 @@ def command_rules(bot, update):
 # version info
 def _build_version_text():
     app_version = os.getenv("APP_VERSION", "").strip()
-    git_sha = os.getenv("GIT_SHA", "").strip()
-    source_version = os.getenv("SOURCE_VERSION", "").strip()
-    github_sha = os.getenv("GITHUB_SHA", "").strip()
-    image_ref = os.getenv("FLY_IMAGE_REF", "").strip()
 
-    if not git_sha:
-        git_sha = source_version or github_sha
 
     lines = ["\u200Fنسخهٔ بات:"]
     lines.append("نسخهٔ برنامه: " + (app_version if app_version else "نامشخص"))
-    lines.append("شناسهٔ کامیت: " + (git_sha if git_sha else "نامشخص"))
-    if image_ref:
-        lines.append("شناسهٔ ایمیج: " + image_ref)
     return "\n".join(lines)
 
 
