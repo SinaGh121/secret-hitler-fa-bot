@@ -104,6 +104,7 @@ class TestCommands(unittest.TestCase):
             self.assertEqual(sent['method'], "sendMessage")
             self.assertIn("\u0646\u0633\u062e\u0647", sent['text'])
             self.assertIn("v10", sent['text'])
+            self.assertNotIn("\n", sent['text'])
         finally:
             if old_app is None:
                 os.environ.pop("APP_VERSION", None)

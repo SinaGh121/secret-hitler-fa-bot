@@ -14,7 +14,7 @@ Living overview of the project for continuity across chats.
 - `BOT_TOKEN` is required; startup raises if missing.
 - `STATS_PATH` defaults to `stats.json` at the repo root; `Constants/Config.py` resolves relative paths and exposes `load_stats`/`save_stats` helpers.
 - `Commands.py` configures logging to `logs/logging.log` and now creates the `logs/` directory on startup.
-- Optional runtime version env var used by `/version`: `APP_VERSION`.
+- Optional runtime version env var used by `/version`: `APP_VERSION` (single-line version output).
 
 ## Architecture overview
 - `Commands.py`: Telegram command handlers (help, start, join, board, votes, etc).

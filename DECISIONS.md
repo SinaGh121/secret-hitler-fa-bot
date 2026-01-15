@@ -82,3 +82,8 @@ Consequences: Reference sources stay untracked; the detailed rules doc remains v
 Context: The user only needs the bot version and does not want image refs or commit IDs in the `/version` response.
 Decision: Make `/version` report only `APP_VERSION` (with a fallback if unset) and update the tests/docs accordingly.
 Consequences: Deploy metadata like commit SHA or image ref is no longer shown in the bot response.
+
+## 2026-01-15 - Use a single version label
+Context: `/version` showed both "bot" and "app" labels, which was redundant.
+Decision: Collapse `/version` to a single line that reports one version value.
+Consequences: Users see one clear version string instead of multiple labels.

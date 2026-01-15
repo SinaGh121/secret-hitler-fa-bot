@@ -106,12 +106,7 @@ def command_rules(bot, update):
 # version info
 def _build_version_text():
     app_version = os.getenv("APP_VERSION", "").strip()
-
-
-    lines = ["\u200Fنسخهٔ بات:"]
-    lines.append("نسخهٔ برنامه: " + (app_version if app_version else "نامشخص"))
-    return "\n".join(lines)
-
+    return "‏نسخه: " + (app_version if app_version else "نامشخص")
 
 def command_version(bot, update):
     cid = update.message.chat_id
