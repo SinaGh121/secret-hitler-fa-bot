@@ -1,1 +1,6 @@
 .env
+logs/
+stats.json
+__pycache__/
+*.pyc
+Rules/Secret-Hitler-Online-development/

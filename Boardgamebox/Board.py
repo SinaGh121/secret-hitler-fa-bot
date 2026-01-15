@@ -1,5 +1,12 @@
-from Constants.Cards import playerSets
-from Constants.Cards import policies
+from Constants.Cards import (
+    ACTION_CHOOSE,
+    ACTION_INSPECT,
+    ACTION_KILL,
+    ACTION_POLICY,
+    ACTION_WIN,
+    playerSets,
+    policies,
+)
 import random
 from Boardgamebox.State import State
 
@@ -29,17 +36,17 @@ class Board(object):
                 board += u"\u2716\uFE0F" + " " #X
             else:
                 action = self.fascist_track_actions[i]
-                if action == None:
+                if action is None:
                     board += u"\u25FB\uFE0F" + " "  # empty
-                elif action == "policy":
+                elif action == ACTION_POLICY:
                     board += u"\U0001F52E" + " " # crystal
-                elif action == "inspect":
+                elif action == ACTION_INSPECT:
                     board += u"\U0001F50E" + " " # inspection glass
-                elif action == "kill":
+                elif action == ACTION_KILL:
                     board += u"\U0001F5E1" + " " # knife
-                elif action == "win":
+                elif action == ACTION_WIN:
                     board += u"\u2620" + " " # skull
-                elif action == "choose":
+                elif action == ACTION_CHOOSE:
                     board += u"\U0001F454" + " " # tie
 
         board += "\n\u200F--- شمارندهٔ انتخابات ---\n"

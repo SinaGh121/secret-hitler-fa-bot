@@ -1,5 +1,7 @@
 from random import shuffle
 
+from Constants.Cards import ROLE_FASCIST, ROLE_HITLER
+
 
 class Game(object):
     def __init__(self, cid, initiator):
@@ -15,13 +17,13 @@ class Game(object):
 
     def get_blue(self):
         for uid in self.playerlist:
-            if self.playerlist[uid].role == "هیتلر":
+            if self.playerlist[uid].role == ROLE_HITLER:
                 return self.playerlist[uid]
 
     def get_fascists(self):
         fascists = []
         for uid in self.playerlist:
-            if self.playerlist[uid].role == "فاشیست":
+            if self.playerlist[uid].role == ROLE_FASCIST:
                 fascists.append(self.playerlist[uid])
         return fascists
 
@@ -30,10 +32,8 @@ class Game(object):
             self.player_sequence.append(self.playerlist[uid])
         shuffle(self.player_sequence)
 
-    def remove_from_player_sequence(self, Player):
-        for p in self.player_sequence:
-            if p.uid == Player.uid:
-                p.remove(Player)
+    def remove_from_player_sequence(self, player):
+        self.player_sequence = [p for p in self.player_sequence if p.uid != player.uid]
 
     def print_roles(self):
         rtext = ""

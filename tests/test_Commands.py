@@ -1,5 +1,9 @@
 from __future__ import absolute_import
+import os
+import random
 import unittest
+
+from telegram import User
 from Commands import *
 import GamesController
 from Boardgamebox.Board import Board
@@ -21,6 +25,27 @@ class TestCommands(unittest.TestCase):
     def setUp(self):
         # For use within the tests we nee some stuff. Starting with a Mockbot
         self.bot = Mockbot()
+        # Updater expects a Request-like object on the bot
+        self.bot.request = type("RequestStub", (), {"con_pool_size": 100})()
+        # Updater polling tries to remove a webhook
+        self.bot.delete_webhook = lambda *args, **kwargs: True
+        # ptbtest Mockbot uses an old User signature; patch per-instance for PTB 12.8
+        mockbot = self.bot
+        def _patched_get_me(*_args, **_kwargs):
+            mockbot.bot = User(0, "Mockbot", True, last_name="Bot", username=mockbot._username)
+            return mockbot.bot
+
+        mockbot.getMe = _patched_get_me
+        def _patched_get_user(self_gen, first_name=None, last_name=None, username=None, id=None):
+            if not first_name:
+                first_name = random.choice(self_gen.FIRST_NAMES)
+            if not last_name:
+                last_name = random.choice(self_gen.LAST_NAMES)
+            if not username:
+                username = first_name + last_name
+            return User(id or self_gen.gen_id(), first_name, False, last_name=last_name, username=username)
+
+        UserGenerator.get_user = _patched_get_user
         # Some generators for users and chats
         self.ug = UserGenerator()
         self.cg = ChatGenerator()
@@ -33,73 +58,87 @@ class TestCommands(unittest.TestCase):
     def test_ping(self):
         # Then register the handler with he updater's dispatcher and start polling
         self.updater.dispatcher.add_handler(CommandHandler("ping", command_ping))
-        self.updater.start_polling()
         # create with random user
-        update = self.mg.get_message(text="/ping")
-        # We insert the update with the bot so the updater can retrieve it.
-        self.bot.insertUpdate(update)
+        update = self.mg.get_message(text="/ping", parse_mode="Markdown")
+        self.updater.dispatcher.process_update(update)
         # sent_messages is the list with calls to the bot's outbound actions. Since we hope the message we inserted
         # only triggered one sendMessage action it's length should be 1.
         self.assertEqual(len(self.bot.sent_messages), 1)
         sent = self.bot.sent_messages[0]
         self.assertEqual(sent['method'], "sendMessage")
-        self.assertEqual(sent['text'], "pong - v0.4")
-        # Always stop the updater at the end of a testcase so it won't hang.
-        self.updater.stop()
+        self.assertEqual(sent['text'], "pong")
 
 
     def test_start(self):
         self.updater.dispatcher.add_handler(CommandHandler("start", command_start))
-        self.updater.start_polling()
-        update = self.mg.get_message(text="/start")
-        self.bot.insertUpdate(update)
+        update = self.mg.get_message(text="/start", parse_mode="Markdown")
+        self.updater.dispatcher.process_update(update)
         self.assertEqual(len(self.bot.sent_messages), 2)
         start = self.bot.sent_messages[0]
         self.assertEqual(start['method'], "sendMessage")
-        self.assertIn("Secret Hitler is a social deduction game", start['text'])
+        self.assertIn("\u0631\u0627\u0632 \u0647\u06cc\u062a\u0644\u0631", start['text'])
         help = self.bot.sent_messages[1]
         self.assertEqual(help['method'], "sendMessage")
-        self.assertIn("The following commands are available", help['text'])
-        self.updater.stop()
+        self.assertIn("\u062f\u0633\u062a\u0648\u0631\u0647\u0627\u06cc \u0632\u06cc\u0631 \u062f\u0631 \u062f\u0633\u062a\u0631\u0633 \u0647\u0633\u062a\u0646\u062f", help['text'])
 
 
     def test_symbols(self):
         self.updater.dispatcher.add_handler(CommandHandler("symbols", command_symbols))
-        self.updater.start_polling()
-        update = self.mg.get_message(text="/symbols")
-        self.bot.insertUpdate(update)
+        update = self.mg.get_message(text="/symbols", parse_mode="Markdown")
+        self.updater.dispatcher.process_update(update)
         self.assertEqual(len(self.bot.sent_messages), 1)
         sent = self.bot.sent_messages[0]
         self.assertEqual(sent['method'], "sendMessage")
-        self.assertIn("The following symbols can appear on the board:", sent['text'])
-        self.updater.stop()
+        self.assertIn("\u0646\u0645\u0627\u062f\u0647\u0627\u06cc \u0632\u06cc\u0631 \u0645\u0645\u06a9\u0646 \u0627\u0633\u062a \u0631\u0648\u06cc \u0635\u0641\u062d\u0647 \u0638\u0627\u0647\u0631 \u0634\u0648\u0646\u062f", sent['text'])
+
+
+    def test_version(self):
+        old_app = os.environ.get("APP_VERSION")
+        old_sha = os.environ.get("GIT_SHA")
+        try:
+            os.environ["APP_VERSION"] = "v10"
+            os.environ["GIT_SHA"] = "abcdef123"
+            self.updater.dispatcher.add_handler(CommandHandler("version", command_version))
+            update = self.mg.get_message(text="/version", parse_mode="Markdown")
+            self.updater.dispatcher.process_update(update)
+            self.assertEqual(len(self.bot.sent_messages), 1)
+            sent = self.bot.sent_messages[0]
+            self.assertEqual(sent['method'], "sendMessage")
+            self.assertIn("\u0646\u0633\u062e\u0647", sent['text'])
+            self.assertIn("v10", sent['text'])
+            self.assertIn("abcdef123", sent['text'])
+        finally:
+            if old_app is None:
+                os.environ.pop("APP_VERSION", None)
+            else:
+                os.environ["APP_VERSION"] = old_app
+            if old_sha is None:
+                os.environ.pop("GIT_SHA", None)
+            else:
+                os.environ["GIT_SHA"] = old_sha
 
 
     def test_board_when_there_is_no_game(self):
         self.updater.dispatcher.add_handler(CommandHandler("board", command_board))
-        self.updater.start_polling()
-        update = self.mg.get_message(text="/board")
-        self.bot.insertUpdate(update)
+        update = self.mg.get_message(text="/board", parse_mode="Markdown")
+        self.updater.dispatcher.process_update(update)
         self.assertEqual(len(self.bot.sent_messages), 1)
         sent = self.bot.sent_messages[0]
         self.assertEqual(sent['method'], "sendMessage")
-        self.assertIn("There is no game in this chat. Create a new game with /newgame", sent['text'])
-        self.updater.stop()
+        self.assertIn("\u0647\u06cc\u0686 \u0628\u0627\u0632\u06cc\u200c\u0627\u06cc \u062f\u0631 \u0627\u06cc\u0646 \u0686\u062a \u0648\u062c\u0648\u062f \u0646\u062f\u0627\u0631\u062f", sent['text'])
 
 
     def test_board_when_game_is_not_running(self):
         game = Game(-999, 12345)
         GamesController.games[-999] = game
         self.updater.dispatcher.add_handler(CommandHandler("board", command_board))
-        self.updater.start_polling()
         chat = self.cg.get_chat(cid=-999)
-        update = self.mg.get_message(chat=chat, text="/board")
-        self.bot.insertUpdate(update)
+        update = self.mg.get_message(chat=chat, text="/board", parse_mode="Markdown")
+        self.updater.dispatcher.process_update(update)
         self.assertEqual(len(self.bot.sent_messages), 1)
         sent = self.bot.sent_messages[0]
         self.assertEqual(sent['method'], "sendMessage")
-        self.assertIn("There is no running game in this chat. Please start the game with /startgame", sent['text'])
-        self.updater.stop()
+        self.assertIn("\u0647\u06cc\u0686 \u0628\u0627\u0632\u06cc \u062f\u0631 \u062d\u0627\u0644 \u0627\u062c\u0631\u0627 \u062f\u0631 \u0627\u06cc\u0646 \u0686\u062a \u0648\u062c\u0648\u062f \u0646\u062f\u0627\u0631\u062f", sent['text'])
 
 
     def test_board_when_game_is_running(self):
@@ -107,12 +146,10 @@ class TestCommands(unittest.TestCase):
         game.board = Board(5, game)
         GamesController.games[-999] = game
         self.updater.dispatcher.add_handler(CommandHandler("board", command_board))
-        self.updater.start_polling()
         chat = self.cg.get_chat(cid=-999)
-        update = self.mg.get_message(chat=chat, text="/board")
-        self.bot.insertUpdate(update)
+        update = self.mg.get_message(chat=chat, text="/board", parse_mode="Markdown")
+        self.updater.dispatcher.process_update(update)
         self.assertEqual(len(self.bot.sent_messages), 1)
         sent = self.bot.sent_messages[0]
         self.assertEqual(sent['method'], "sendMessage")
-        self.assertIn("--- Liberal acts ---", sent['text'])
-        self.updater.stop()
+        self.assertIn("\u200F--- \u0627\u0642\u062f\u0627\u0645\u0627\u062a \u0644\u06cc\u0628\u0631\u0627\u0644\u200c\u0647\u0627 ---", sent['text'])

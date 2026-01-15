@@ -23,6 +23,8 @@ If you have any problems or find a bug please open an issue here on GitHub!
 /startgame   Starts an existing game when all players have joined
 /cancelgame  Cancels an existing game. All data of the game will be lost
 /board       Prints the current board with fascist and liberal tracks, presidential order and election counter
+/ping        Checks if the bot is responsive
+/version     Shows the running bot version and commit id
 ```
 
 ## Test new features

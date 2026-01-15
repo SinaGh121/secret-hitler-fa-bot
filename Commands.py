@@ -1,5 +1,6 @@
-import json
 import logging as log
+import os
+from pathlib import Path
 
 import datetime
 
@@ -10,16 +11,20 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 
 import MainController
 import GamesController
-from Constants.Config import STATS
+from Constants.Config import load_stats, save_stats
 from Boardgamebox.Board import Board
 from Boardgamebox.Game import Game
 from Boardgamebox.Player import Player
 from Constants.Config import ADMIN
 
 # Enable logging
+LOG_DIR = Path(__file__).resolve().parent / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = LOG_DIR / "logging.log"
+
 log.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                 level=log.INFO,
-                filename='logs/logging.log')
+                filename=str(LOG_FILE))
 
 logger = log.getLogger(__name__)
 
@@ -33,6 +38,8 @@ commands = [  # command description used in the "help" command
     '\u061C\u200E/startgame\u200E - پس از پیوستن همهٔ بازیکنان، بازی را آغاز می‌کند',
     '\u061C\u200E/cancelgame\u200E - بازی موجود را لغو می‌کند؛ تمام داده‌های بازی از بین می‌رود',
     '\u061C\u200E/board\u200E - صفحهٔ فعلی را با مسیرهای سیاست فاشیست و لیبرال، ترتیب ریاست‌جمهوری و شمارندهٔ انتخابات نشان می‌دهد',
+    '\u061C\u200E/ping\u200E - وضعیت اتصال بات را بررسی می‌کند',
+    '\u061C\u200E/version\u200E - نسخهٔ بات و شناسهٔ استقرار را نمایش می‌دهد',
     '\u061C\u200E/votes\u200E - رأی هر بازیکن را نمایش می‌دهد',
     '\u061C\u200E/calltovote\u200E - بازیکنان را برای رأی‌گیری فرا می‌خواند'
 ]
@@ -96,18 +103,41 @@ def command_rules(bot, update):
     bot.send_message(cid, '\u200Fقوانین رسمی راز هیتلر را بخوانید:', reply_markup=rulesMarkup)
 
 
+# version info
+def _build_version_text():
+    app_version = os.getenv("APP_VERSION", "").strip()
+    git_sha = os.getenv("GIT_SHA", "").strip()
+    source_version = os.getenv("SOURCE_VERSION", "").strip()
+    github_sha = os.getenv("GITHUB_SHA", "").strip()
+    image_ref = os.getenv("FLY_IMAGE_REF", "").strip()
+
+    if not git_sha:
+        git_sha = source_version or github_sha
+
+    lines = ["\u200Fنسخهٔ بات:"]
+    lines.append("نسخهٔ برنامه: " + (app_version if app_version else "نامشخص"))
+    lines.append("شناسهٔ کامیت: " + (git_sha if git_sha else "نامشخص"))
+    if image_ref:
+        lines.append("شناسهٔ ایمیج: " + image_ref)
+    return "\n".join(lines)
+
+
+def command_version(bot, update):
+    cid = update.message.chat_id
+    bot.send_message(cid, _build_version_text())
+
+
 # pings the bot
 def command_ping(bot, update):
     cid = update.message.chat_id
-    bot.send_message(cid, 'pong - v0.4')
+    bot.send_message(cid, 'pong')
 
 
 # prints statistics, only ADMIN
 def command_stats(bot, update):
     cid = update.message.chat_id
     if cid == ADMIN:
-        with open(STATS, 'r') as f:
-            stats = json.load(f)
+        stats = load_stats()
         stattext = (
             '\u200F+++ آمار +++\n'
             'پیروزی لیبرال‌ها (سیاست‌ها): ' + str(stats.get("libwin_policies")) + '\n'
@@ -116,7 +146,7 @@ def command_stats(bot, update):
             'پیروزی فاشیست‌ها (هیتلر به‌عنوان صدراعظم): ' + str(stats.get("fascwin_blue")) + '\n'
             'بازی‌های لغوشده: ' + str(stats.get("cancelled")) + '\n\n'
             'تعداد کل گروه‌ها: ' + str(len(stats.get("groups"))) + '\n'
-            'بازی‌های در حال اجرا: '
+            'بازی‌های در حال اجرا: ' + str(len(GamesController.games))
         )
         bot.send_message(cid, stattext)
 
@@ -146,12 +176,10 @@ def command_newgame(bot, update):
         )
     else:
         GamesController.games[cid] = Game(cid, update.message.from_user.id)
-        with open(STATS, 'r') as f:
-            stats = json.load(f)
+        stats = load_stats()
         if cid not in stats.get("groups"):
             stats.get("groups").append(cid)
-            with open(STATS, 'w') as f:
-                json.dump(stats, f)
+            save_stats(stats)
         bot.send_message(
             cid,
             '\u200Fبازی جدید ساخته شد! هر بازیکن باید با دستور \u200E/join\u200E به بازی بپیوندد.\n'

@@ -9,7 +9,6 @@ License         : CC BY-NC-SA 4.0 – see LICENSE file
 __author__ = "Julian Schrittwieser (original), Sina Ghaderi (fork)"
 __maintainer__ = "Sina Ghaderi"
 
-import json
 import logging as log
 import random
 import re
@@ -20,8 +19,21 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (Updater, CommandHandler, CallbackQueryHandler)
 
 import Commands
-from Constants.Cards import playerSets
-from Constants.Config import TOKEN, STATS
+from Constants.Cards import (
+    ACTION_CHOOSE,
+    ACTION_INSPECT,
+    ACTION_KILL,
+    ACTION_POLICY,
+    PARTY_FASCIST,
+    PARTY_LIBERAL,
+    POLICY_FASCIST,
+    POLICY_LIBERAL,
+    ROLE_FASCIST,
+    ROLE_HITLER,
+    ROLE_LIBERAL,
+    playerSets,
+)
+from Constants.Config import TOKEN, load_stats, save_stats
 from Boardgamebox.Game import Game
 from Boardgamebox.Player import Player
 import GamesController
@@ -35,6 +47,8 @@ log.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                 )
 
 logger = log.getLogger(__name__)
+
+POLICY_CALLBACK_PATTERN = "(-[0-9]*)_(%s|%s|veto)" % (POLICY_LIBERAL, POLICY_FASCIST)
 
 
 def initialize_testdata():
@@ -226,15 +240,15 @@ def voting_aftermath(bot, game, voting_success):
     log.info('voting_aftermath called')
     game.board.state.last_votes = {}
     if voting_success:
-        if game.board.state.fascist_track >= 3 and game.board.state.chancellor.role == "Blue":
-            # fascists win, because Blue was elected as chancellor after 3 fascist policies
+        if game.board.state.fascist_track >= 3 and game.board.state.chancellor.role == ROLE_HITLER:
+            # fascists win, because Hitler was elected as chancellor after 3 fascist policies
             game.board.state.game_endcode = -2
             end_game(bot, game, game.board.state.game_endcode)
-        elif game.board.state.fascist_track >= 3 and game.board.state.chancellor.role != "Blue" and game.board.state.chancellor not in game.board.state.not_blues:
+        elif game.board.state.fascist_track >= 3 and game.board.state.chancellor.role != ROLE_HITLER and game.board.state.chancellor not in game.board.state.not_blues:
             game.board.state.not_blues.append(game.board.state.chancellor)
             draw_policies(bot, game)
         else:
-            # voting was successful and Blue was not nominated as chancellor after 3 fascist policies
+            # voting was successful and Hitler was not nominated as chancellor after 3 fascist policies
             draw_policies(bot, game)
     else:
         bot.send_message(game.cid, game.board.print_board())
@@ -374,9 +388,9 @@ def pass_two_policies(bot, game):
 
 def enact_policy(bot, game, policy, anarchy):
     log.info('enact_policy called')
-    if policy == "liberal":
+    if policy == POLICY_LIBERAL:
         game.board.state.liberal_track += 1
-    elif policy == "fascist":
+    elif policy == POLICY_FASCIST:
         game.board.state.fascist_track += 1
     game.board.state.failed_votes = 0  # reset counter
     if not anarchy:
@@ -403,13 +417,13 @@ def enact_policy(bot, game, policy, anarchy):
     # End of legislative session, shuffle if necessary 
     shuffle_policy_pile(bot, game)    
     if not anarchy:
-        if policy == "fascist":
+        if policy == POLICY_FASCIST:
             action = game.board.fascist_track_actions[game.board.state.fascist_track - 1]
             if action is None and game.board.state.fascist_track == 6:
                 pass
-            elif action == None:
+            elif action is None:
                 start_next_round(bot, game)
-            elif action == "policy":
+            elif action == ACTION_POLICY:
                 bot.send_message(
                     game.cid,
                     "\u200Fقدرت ریاست‌جمهوری فعال شد: بررسی سیاست‌ها " + u"\U0001F52E" +
@@ -418,7 +432,7 @@ def enact_policy(bot, game, policy, anarchy):
                     "(یا دربارهٔ آن دروغ بگوید!)." % game.board.state.president.name
                 )
                 action_policy(bot, game)
-            elif action == "kill":
+            elif action == ACTION_KILL:
                 bot.send_message(
                     game.cid,
                     "\u200Fقدرت ریاست‌جمهوری فعال شد: اعدام " + u"\U0001F5E1" +
@@ -426,7 +440,7 @@ def enact_policy(bot, game, policy, anarchy):
                     "بحث کنید ولی رأی نهایی با رئیس‌جمهور است." % game.board.state.president.name
                 )
                 action_kill(bot, game)
-            elif action == "inspect":
+            elif action == ACTION_INSPECT:
                 bot.send_message(
                     game.cid,
                     "\u200Fقدرت ریاست‌جمهوری فعال شد: بررسی وفاداری " + u"\U0001F50E" +
@@ -435,7 +449,7 @@ def enact_policy(bot, game, policy, anarchy):
                     "(یا دربارهٔ آن دروغ بگوید!)." % game.board.state.president.name
                 )
                 action_inspect(bot, game)
-            elif action == "choose":
+            elif action == ACTION_CHOOSE:
                 bot.send_message(
                     game.cid,
                     "\u200Fقدرت ریاست‌جمهوری فعال شد: برگزاری انتخابات ویژه " + u"\U0001F454" +
@@ -507,6 +521,7 @@ def do_anarchy(bot, game):
     bot.send_message(game.cid, '\u200Fهرج‌ومرج!!')
     game.board.state.president = None
     game.board.state.chancellor = None
+    shuffle_policy_pile(bot, game)
     top_policy = game.board.policies.pop(0)
     game.board.state.last_votes = {}
     enact_policy(bot, game, top_policy, True)
@@ -566,7 +581,7 @@ def choose_kill(bot, update):
             callback.from_user.id,
             callback.message.message_id
         )
-        if chosen.role == "Blue":
+        if chosen.role == ROLE_HITLER:
             bot.send_message(
                 game.cid,
                 '\u200Fرئیس‌جمهور ' + game.board.state.president.name + '، ' + chosen.name + ' را کشت.'
@@ -636,9 +651,21 @@ def action_inspect(bot, game):
     strcid = str(game.cid)
     btns = []
     for uid in game.playerlist:
-        if uid != game.board.state.president.uid and game.playerlist[uid].is_dead == False:
+        if uid != game.board.state.president.uid and game.playerlist[uid].is_dead == False and uid not in game.board.state.inspected_uids:
             name = game.playerlist[uid].name
             btns.append([InlineKeyboardButton(name, callback_data=strcid + "_insp_" + str(uid))])
+
+    if not btns:
+        bot.send_message(
+            game.board.state.president.uid,
+            '\u200Fهمهٔ بازیکنان قبلاً بازرسی شده‌اند و گزینهٔ معتبری باقی نمانده است.'
+        )
+        bot.send_message(
+            game.cid,
+            '\u200Fهیچ بازیکن بازرسی‌نشده‌ای باقی نمانده است؛ نوبت بعدی آغاز می‌شود.'
+        )
+        start_next_round(bot, game)
+        return
 
     inspectMarkup = InlineKeyboardMarkup(btns)
     bot.send_message(game.board.state.president.uid, game.board.print_board())
@@ -658,6 +685,14 @@ def choose_inspect(bot, update):
     try:
         game = GamesController.games[cid]
         chosen = game.playerlist[answer]
+        if answer in game.board.state.inspected_uids:
+            bot.send_message(
+                callback.from_user.id,
+                '\u200Fاین بازیکن قبلاً بازرسی شده است. لطفاً بازیکن دیگری را انتخاب کنید.'
+            )
+            action_inspect(bot, game)
+            return
+        game.board.state.inspected_uids.add(answer)
         log.info(
             "Player %s (%d) inspects %s (%d)'s party membership (%s)" % (
                 callback.from_user.first_name, callback.from_user.id, chosen.name, chosen.uid,
@@ -699,15 +734,14 @@ def end_game(bot, game, game_endcode):
     log.info('end_game called')
     ##
     # game_endcode:
-    #   -2  fascists win by electing Blue as chancellor
+    #   -2  fascists win by electing Hitler as chancellor
     #   -1  fascists win with 6 fascist policies
     #   0   not ended
     #   1   liberals win with 5 liberal policies
-    #   2   liberals win by killing Blue
+    #   2   liberals win by killing Hitler
     #   99  game cancelled
     #
-    with open(STATS, 'r') as f:
-        stats = json.load(f)
+    stats = load_stats()
 
     if game_endcode == 99:
         if GamesController.games[game.cid].board is not None:
@@ -745,8 +779,7 @@ def end_game(bot, game, game_endcode):
 
             # bot.send_message(ADMIN, "Game of Secret Blue ended in group %d" % game.cid)
 
-    with open(STATS, 'w') as f:
-        json.dump(stats, f)
+    save_stats(stats)
     del GamesController.games[game.cid]
 
 
@@ -790,7 +823,7 @@ def inform_fascists(bot, game, player_number):
 
     for uid in game.playerlist:
         role = game.playerlist[uid].role
-        if role == "Fascist":
+        if role == ROLE_FASCIST:
             fascists = game.get_fascists()
             if player_number > 6:
                 fstring = ""
@@ -801,11 +834,11 @@ def inform_fascists(bot, game, player_number):
                 bot.send_message(uid, '\u200Fهم‌حزبی‌های فاشیست شما: %s' % fstring)
             blue = game.get_blue()
             bot.send_message(uid, '\u200Fهیتلر این است: %s' % blue.name)
-        elif role == "Blue":
+        elif role == ROLE_HITLER:
             if player_number <= 6:
                 fascists = game.get_fascists()
                 bot.send_message(uid, '\u200Fهم‌حزبی فاشیست شما: %s' % fascists[0].name)
-        elif role == "Liberal":
+        elif role == ROLE_LIBERAL:
             pass
         else:
             log.error("inform_fascists: can\'t handle the role %s" % role)
@@ -813,10 +846,10 @@ def inform_fascists(bot, game, player_number):
 
 def get_membership(role):
     log.info('get_membership called')
-    if role == "Fascist" or role == "Blue":
-        return "fascist"
-    elif role == "Liberal":
-        return "liberal"
+    if role in (ROLE_FASCIST, ROLE_HITLER):
+        return PARTY_FASCIST
+    elif role == ROLE_LIBERAL:
+        return PARTY_LIBERAL
     else:
         return None
 
@@ -859,6 +892,7 @@ def main():
     dp.add_handler(CommandHandler("help", Commands.command_help))
     dp.add_handler(CommandHandler("board", Commands.command_board))
     dp.add_handler(CommandHandler("rules", Commands.command_rules))
+    dp.add_handler(CommandHandler("version", Commands.command_version))
     dp.add_handler(CommandHandler("ping", Commands.command_ping))
     dp.add_handler(CommandHandler("symbols", Commands.command_symbols))
     dp.add_handler(CommandHandler("stats", Commands.command_stats))
@@ -874,7 +908,7 @@ def main():
     dp.add_handler(CallbackQueryHandler(pattern="(-[0-9]*)_choo_(.*)", callback=choose_choose))
     dp.add_handler(CallbackQueryHandler(pattern="(-[0-9]*)_kill_(.*)", callback=choose_kill))
     dp.add_handler(CallbackQueryHandler(pattern="(-[0-9]*)_(yesveto|noveto)", callback=choose_veto))
-    dp.add_handler(CallbackQueryHandler(pattern="(-[0-9]*)_(liberal|fascist|veto)", callback=choose_policy))
+    dp.add_handler(CallbackQueryHandler(pattern=POLICY_CALLBACK_PATTERN, callback=choose_policy))
     dp.add_handler(CallbackQueryHandler(pattern="(-[0-9]*)_(Ja|Nein)", callback=handle_voting))
 
     # log all errors

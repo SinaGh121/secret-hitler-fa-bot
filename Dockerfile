@@ -3,7 +3,9 @@
 # ───────────────────────────────────
 
 # 1) base image
-FROM python:3.13-slim
+FROM python:3.10-slim
+
+ARG GIT_SHA=""
 
 # 2) install system deps required by cryptography / pycparser
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -26,7 +28,8 @@ COPY . .
 # 6) runtime env-vars (optional defaults; real TOKEN via Fly secrets)
 ENV PYTHONUNBUFFERED=1 \
     BOT_TOKEN="" \
-    STATS_PATH="./stats.json"
+    STATS_PATH="./stats.json" \
+    GIT_SHA=$GIT_SHA
 
 # 7) start command (match your MainController location)
 CMD ["python", "MainController.py"]

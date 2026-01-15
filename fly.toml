@@ -3,5 +3,8 @@ app = "secrethitlerfabot"
 [build]
   dockerfile = "Dockerfile"
 
+[build.args]
+  GIT_SHA = ""
+
 [processes]
   bot = "python MainController.py"
