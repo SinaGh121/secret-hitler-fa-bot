@@ -25,7 +25,7 @@ Living overview of the project for continuity across chats.
 - `MainController.py` uses Unicode LTR isolates for Latin names in RTL messages and maps Ja/Nein to Persian labels for vote display.
 - `Commands.py` resolves the bot username at runtime for the join fallback message.
 - `Boardgamebox/Board.py` renders board tracks with blue (liberal), red (fascist), and white (empty) emoji squares.
-- Temporary `/testboard` command renders a sample board without starting a game.
+- Temporary `/testboard` command is currently disabled (implementation remains for later use).
 
 ## State and data
 - Game state is in-memory only (`GamesController.games`); no persistence beyond stats JSON.

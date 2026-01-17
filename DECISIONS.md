@@ -112,3 +112,8 @@ Consequences: Empty slots render at emoji size and align better with other icons
 Context: The user wanted to preview a sample board without starting a game.
 Decision: Add a `/testboard` command that renders a sample board with dummy players and sample track progress.
 Consequences: Users can preview board formatting before a game; command should be removed when no longer needed.
+
+## 2026-01-15 - Disable testboard command
+Context: The user asked to stop exposing the temporary `/testboard` command.
+Decision: Remove the handler so the command is no longer registered.
+Consequences: `/testboard` is inactive without deleting the implementation.
