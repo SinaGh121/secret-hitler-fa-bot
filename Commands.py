@@ -28,6 +28,24 @@ log.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 
 logger = log.getLogger(__name__)
 
+_BOT_USERNAME_CACHE = None
+
+def _get_bot_ref(bot):
+    global _BOT_USERNAME_CACHE
+    if _BOT_USERNAME_CACHE:
+        return _BOT_USERNAME_CACHE
+    try:
+        username = getattr(bot, "username", None)
+        if not username:
+            me = bot.getMe()
+            username = getattr(me, "username", None)
+        if username:
+            _BOT_USERNAME_CACHE = "@" + username
+            return _BOT_USERNAME_CACHE
+    except Exception:
+        pass
+    return ""
+
 commands = [  # command description used in the "help" command
     '\u061C\u200E/help\u200E - فهرست دستورهای موجود را نمایش می‌دهد',
     '\u061C\u200E/start\u200E - توضیح کوتاهی دربارهٔ راز هیتلر ارائه می‌دهد',
@@ -82,6 +100,26 @@ def command_board(bot, update):
         )
 
 
+
+def command_testboard(bot, update):
+    cid = update.message.chat_id
+    sample_names = [
+        "Maryam", "Mohammad", "Anoosha", "Pooya", "Alireza.GH",
+        "Pargol", "Shirin", "Solmaz", "Sina"
+    ]
+    game = Game(cid, update.message.from_user.id)
+    uid_base = 1000
+    for idx, name in enumerate(sample_names):
+        player = Player(name, uid_base + idx)
+        game.add_player(player.uid, player)
+        game.player_sequence.append(player)
+    board = Board(len(sample_names), game)
+    board.state.liberal_track = 2
+    board.state.fascist_track = 3
+    board.state.failed_votes = 1
+    if len(board.policies) > 14:
+        board.policies = board.policies[:14]
+    bot.send_message(cid, board.print_board())
 def command_start(bot, update):
     cid = update.message.chat_id
     bot.send_message(
@@ -216,10 +254,11 @@ def command_join(bot, update):
             )
             game.add_player(uid, player)
         except Exception:
+            bot_ref = _get_bot_ref(bot)
             bot.send_message(
                 game.cid,
-                '\u200F%s، نمی‌توانم پیام خصوصی برایتان بفرستم. لطفاً به \u200E@thesecretbluebot\u200E بروید و '
-                'روی «\u200EStart\u200E» کلیک کنید.\nسپس باید دوباره دستور \u200E/join\u200E را ارسال کنید.' % fname
+                '\u200F%s، نمی‌توانم پیام خصوصی برایتان بفرستم. لطفاً به \u200E%s\u200E بروید و '
+                'روی «\u200EStart\u200E» کلیک کنید.\nسپس باید دوباره دستور \u200E/join\u200E را ارسال کنید.' % (fname, bot_ref)
             )
         else:
             log.info("%s (%d) joined a game in %d" % (fname, uid, game.cid))

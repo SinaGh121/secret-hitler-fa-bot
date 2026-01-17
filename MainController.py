@@ -49,6 +49,34 @@ log.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 logger = log.getLogger(__name__)
 
 POLICY_CALLBACK_PATTERN = "(-[0-9]*)_(%s|%s|veto)" % (POLICY_LIBERAL, POLICY_FASCIST)
+LRI = "\u2066"
+PDI = "\u2069"
+
+VOTE_LABELS = {
+    "Ja": "\u0622\u0631\u06cc",
+    "Nein": "\u0646\u0647",
+}
+
+VOTE_LINE_TEMPLATE = "\u200F%s \u0631\u0627\u06cc %s \u062f\u0627\u062f.\n"
+
+
+def _needs_ltr_isolate(text):
+    for ch in text:
+        if ("A" <= ch <= "Z") or ("a" <= ch <= "z") or ("0" <= ch <= "9") or ch in "._-":
+            return True
+    return False
+
+
+def _format_name(text):
+    return f"{LRI}{text}{PDI}" if _needs_ltr_isolate(text) else text
+
+
+def _vote_label(answer):
+    return VOTE_LABELS.get(answer, answer)
+
+
+def _format_vote_line(name, answer):
+    return VOTE_LINE_TEMPLATE % (_format_name(name), _vote_label(answer))
 
 
 def initialize_testdata():
@@ -72,10 +100,11 @@ def start_round(bot, game):
     else:
         game.board.state.nominated_president = game.board.state.chosen_president
         game.board.state.chosen_president = None
+    pres_name = _format_name(game.board.state.nominated_president.name)
     bot.send_message(
     game.cid,
     "\u200Fنامزد بعدی ریاست‌جمهوری %s است.\n%s، لطفاً در گفت‌وگوی خصوصی یک صدراعظم معرفی کن!" %
-    (game.board.state.nominated_president.name, game.board.state.nominated_president.name)
+    (pres_name, pres_name)
 )
     choose_chancellor(bot, game)
     # --> nominate_chosen_chancellor --> vote --> handle_voting --> count_votes --> voting_aftermath --> draw_policies
@@ -130,19 +159,21 @@ def nominate_chosen_chancellor(bot, update):
         log.info(game)
         log.info(game.board)
         game.board.state.nominated_chancellor = game.playerlist[chosen_uid]
+        pres_name = _format_name(game.board.state.nominated_president.name)
+        chan_name = _format_name(game.board.state.nominated_chancellor.name)
         log.info("President %s (%d) nominated %s (%d)" % (
             game.board.state.nominated_president.name, game.board.state.nominated_president.uid,
             game.board.state.nominated_chancellor.name, game.board.state.nominated_chancellor.uid))
         bot.edit_message_text(
             '\u200Fشما %s را به‌عنوان صدراعظم نامزد کردید!' %
-            game.board.state.nominated_chancellor.name,
+            chan_name,
             callback.from_user.id,
             callback.message.message_id
         )
         bot.send_message(
             game.cid,
             '\u200Fرئیس‌جمهور %s، %s را به‌عنوان صدراعظم نامزد کرد. لطفاً اکنون رأی دهید!' %
-            (game.board.state.nominated_president.name, game.board.state.nominated_chancellor.name)
+            (pres_name, chan_name)
         )
         vote(bot, game)
     except AttributeError as e:
@@ -156,9 +187,11 @@ def vote(bot, game):
     # When voting starts we start the counter to see later with the vote/calltovote command we can see who voted.
     game.dateinitvote = datetime.datetime.now()
     strcid = str(game.cid)
-    btns = [[InlineKeyboardButton('\u200Fبله', callback_data=strcid + "_Ja"),
-             InlineKeyboardButton('\u200Fخیر', callback_data=strcid + "_Nein")]]
+    btns = [[InlineKeyboardButton(VOTE_LABELS["Ja"], callback_data=strcid + "_Ja"),
+             InlineKeyboardButton(VOTE_LABELS["Nein"], callback_data=strcid + "_Nein")]]
     voteMarkup = InlineKeyboardMarkup(btns)
+    pres_name = _format_name(game.board.state.nominated_president.name)
+    chan_name = _format_name(game.board.state.nominated_chancellor.name)
     for uid in game.playerlist:
         if not game.playerlist[uid].is_dead:
             if game.playerlist[uid] is not game.board.state.nominated_president:
@@ -167,8 +200,8 @@ def vote(bot, game):
             bot.send_message(
                 uid,
                 '\u200Fآیا می‌خواهید %s را به‌عنوان رئیس‌جمهور و %s را به‌عنوان صدراعظم انتخاب کنید؟' % (
-                    game.board.state.nominated_president.name,
-                    game.board.state.nominated_chancellor.name
+                    pres_name,
+                    chan_name
                 ),
                 reply_markup=voteMarkup
             )
@@ -183,9 +216,12 @@ def handle_voting(bot, update):
     try:
         game = GamesController.games[cid]
         uid = callback.from_user.id
+        answer_text = _vote_label(answer)
+        pres_name = _format_name(game.board.state.nominated_president.name)
+        chan_name = _format_name(game.board.state.nominated_chancellor.name)
         bot.edit_message_text(
             '\u200Fاز رأی شما متشکرم: %s برای رئیس‌جمهور %s و صدراعظم %s' %
-            (answer, game.board.state.nominated_president.name, game.board.state.nominated_chancellor.name),
+            (answer_text, pres_name, chan_name),
             uid,
             callback.message.message_id
         )
@@ -206,15 +242,17 @@ def count_votes(bot, game):
     voting_success = False
     for player in game.player_sequence:
         if game.board.state.last_votes[player.uid] == "Ja":
-            voting_text += game.playerlist[player.uid].name + " voted Ja!\n"
+            voting_text += _format_vote_line(game.playerlist[player.uid].name, "Ja")
         elif game.board.state.last_votes[player.uid] == "Nein":
-            voting_text += game.playerlist[player.uid].name + " voted Nein!\n"
+            voting_text += _format_vote_line(game.playerlist[player.uid].name, "Nein")
+    pres_name = _format_name(game.board.state.nominated_president.name)
+    chan_name = _format_name(game.board.state.nominated_chancellor.name)
     if list(game.board.state.last_votes.values()).count("Ja") > (
         len(game.player_sequence) / 2):  # because player_sequence doesnt include dead
         # VOTING WAS SUCCESSFUL
         log.info("Voting successful")
         voting_text += "\u200Fدرود بر رئیس‌جمهور %s! درود بر صدراعظم %s!" % (
-            game.board.state.nominated_president.name, game.board.state.nominated_chancellor.name
+            pres_name, chan_name
         )
         game.board.state.chancellor = game.board.state.nominated_chancellor
         game.board.state.president = game.board.state.nominated_president
@@ -896,6 +934,7 @@ def main():
     dp.add_handler(CommandHandler("ping", Commands.command_ping))
     dp.add_handler(CommandHandler("symbols", Commands.command_symbols))
     dp.add_handler(CommandHandler("stats", Commands.command_stats))
+    dp.add_handler(CommandHandler("testboard", Commands.command_testboard))
     dp.add_handler(CommandHandler("newgame", Commands.command_newgame))
     dp.add_handler(CommandHandler("startgame", Commands.command_startgame))
     dp.add_handler(CommandHandler("cancelgame", Commands.command_cancelgame))

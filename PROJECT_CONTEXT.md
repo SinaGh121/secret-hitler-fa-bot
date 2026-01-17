@@ -22,6 +22,10 @@ Living overview of the project for continuity across chats.
 - `GamesController.py`: holds the global `games` dict, initialized via `init()`.
 - `Boardgamebox/`: core game data structures (`Board`, `Game`, `Player`, `State`).
 - `Constants/Cards.py`: role sets, policy deck definitions, and canonical constants for roles, policies, and track actions.
+- `MainController.py` uses Unicode LTR isolates for Latin names in RTL messages and maps Ja/Nein to Persian labels for vote display.
+- `Commands.py` resolves the bot username at runtime for the join fallback message.
+- `Boardgamebox/Board.py` renders board tracks with blue (liberal), red (fascist), and white (empty) squares.
+- Temporary `/testboard` command renders a sample board without starting a game.
 
 ## State and data
 - Game state is in-memory only (`GamesController.games`); no persistence beyond stats JSON.

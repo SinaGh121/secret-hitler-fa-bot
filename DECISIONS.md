@@ -87,3 +87,23 @@ Consequences: Deploy metadata like commit SHA or image ref is no longer shown in
 Context: `/version` showed both "bot" and "app" labels, which was redundant.
 Decision: Collapse `/version` to a single line that reports one version value.
 Consequences: Users see one clear version string instead of multiple labels.
+
+## 2026-01-15 - Localize vote output and stabilize RTL/LTR names
+Context: Vote results were shown as "voted Ja/Nein" and mixed LTR names inside RTL sentences swapped order.
+Decision: Map Ja/Nein to Persian labels for display and wrap LTR-ish names with Unicode isolates in key vote/nomination messages.
+Consequences: Voting output is fully Persian and mixed-direction name order stays consistent in Telegram.
+
+## 2026-01-15 - Use dynamic bot username in join fallback
+Context: The join error message still pointed to the old bot username.
+Decision: Resolve the current bot username at runtime and inject it into the join fallback message.
+Consequences: Users are directed to the correct bot when private messages are blocked.
+
+## 2026-01-15 - Update board track icons
+Context: The board needed clearer, color-coded progress markers while keeping other icons unchanged.
+Decision: Use white squares for empty slots, blue squares for liberal progress, and red squares for fascist progress.
+Consequences: Board tracks read more clearly without changing action icons or vote markers.
+
+## 2026-01-15 - Add temporary testboard command
+Context: The user wanted to preview a sample board without starting a game.
+Decision: Add a `/testboard` command that renders a sample board with dummy players and sample track progress.
+Consequences: Users can preview board formatting before a game; command should be removed when no longer needed.
