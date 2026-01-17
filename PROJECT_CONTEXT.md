@@ -24,7 +24,7 @@ Living overview of the project for continuity across chats.
 - `Constants/Cards.py`: role sets, policy deck definitions, and canonical constants for roles, policies, and track actions.
 - `MainController.py` uses Unicode LTR isolates for Latin names in RTL messages and maps Ja/Nein to Persian labels for vote display.
 - `Commands.py` resolves the bot username at runtime for the join fallback message.
-- `Boardgamebox/Board.py` renders board tracks with blue (liberal), red (fascist), and white (empty) squares.
+- `Boardgamebox/Board.py` renders board tracks with blue (liberal), red (fascist), and white (empty) emoji squares.
 - Temporary `/testboard` command renders a sample board without starting a game.
 
 ## State and data

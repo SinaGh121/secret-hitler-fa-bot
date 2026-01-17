@@ -29,7 +29,7 @@ class Board(object):
             elif i >= self.state.liberal_track and i == 4:
                 board += u"\U0001F54A" + " " #dove
             else:
-                board += u"\u2B1C" + " " #empty
+                board += u"\u2B1C\uFE0F" + " " #empty
         board += "\n\u200F--- اقدامات فاشیست‌ها ---\n"
         for i in range(6):
             if i < self.state.fascist_track:
@@ -37,7 +37,7 @@ class Board(object):
             else:
                 action = self.fascist_track_actions[i]
                 if action is None:
-                    board += u"\u2B1C" + " "  # empty
+                    board += u"\u2B1C\uFE0F" + " "  # empty
                 elif action == ACTION_POLICY:
                     board += u"\U0001F52E" + " " # crystal
                 elif action == ACTION_INSPECT:
@@ -54,7 +54,7 @@ class Board(object):
             if i < self.state.failed_votes:
                 board += u"\u2716\uFE0F" + " " #X
             else:
-                board += u"\u2B1C" + " " #empty
+                board += u"\u2B1C\uFE0F" + " " #empty
 
         board += "\n\u200F--- ترتیب ریاست‌جمهوری  ---\n"
         for player in self.game.player_sequence:

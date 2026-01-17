@@ -103,6 +103,11 @@ Context: The board needed clearer, color-coded progress markers while keeping ot
 Decision: Use white squares for empty slots, blue squares for liberal progress, and red squares for fascist progress.
 Consequences: Board tracks read more clearly without changing action icons or vote markers.
 
+## 2026-01-15 - Force emoji rendering for empty squares
+Context: The white square could render as text glyph and look smaller than emoji squares.
+Decision: Add the emoji variation selector (VS16) to the white square icon.
+Consequences: Empty slots render at emoji size and align better with other icons.
+
 ## 2026-01-15 - Add temporary testboard command
 Context: The user wanted to preview a sample board without starting a game.
 Decision: Add a `/testboard` command that renders a sample board with dummy players and sample track progress.
