@@ -117,3 +117,8 @@ Consequences: Users can preview board formatting before a game; command should b
 Context: The user asked to stop exposing the temporary `/testboard` command.
 Decision: Remove the handler so the command is no longer registered.
 Consequences: `/testboard` is inactive without deleting the implementation.
+
+## 2026-01-15 - Use git SHA for /version
+Context: The user wants `/version` to show the running git version instead of manual env versioning.
+Decision: Read `GIT_SHA` (falling back to `SOURCE_VERSION` or `GITHUB_SHA`) and display the short SHA.
+Consequences: `/version` now reflects the deployed commit when SHA is injected at build or deploy time.

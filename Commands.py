@@ -143,8 +143,14 @@ def command_rules(bot, update):
 
 # version info
 def _build_version_text():
-    app_version = os.getenv("APP_VERSION", "").strip()
-    return "‏نسخه: " + (app_version if app_version else "نامشخص")
+    git_sha = os.getenv("GIT_SHA", "").strip()
+    source_version = os.getenv("SOURCE_VERSION", "").strip()
+    github_sha = os.getenv("GITHUB_SHA", "").strip()
+    if not git_sha:
+        git_sha = source_version or github_sha
+    if git_sha:
+        git_sha = git_sha[:7]
+    return "‏نسخه: " + (git_sha if git_sha else "نامشخص")
 
 def command_version(bot, update):
     cid = update.message.chat_id

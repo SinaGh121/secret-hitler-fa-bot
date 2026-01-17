@@ -14,7 +14,7 @@ Living overview of the project for continuity across chats.
 - `BOT_TOKEN` is required; startup raises if missing.
 - `STATS_PATH` defaults to `stats.json` at the repo root; `Constants/Config.py` resolves relative paths and exposes `load_stats`/`save_stats` helpers.
 - `Commands.py` configures logging to `logs/logging.log` and now creates the `logs/` directory on startup.
-- Optional runtime version env var used by `/version`: `APP_VERSION` (single-line version output).
+- Optional runtime version env vars used by `/version`: `GIT_SHA` (preferred), `SOURCE_VERSION`, `GITHUB_SHA` (short SHA output).
 
 ## Architecture overview
 - `Commands.py`: Telegram command handlers (help, start, join, board, votes, etc).
@@ -42,7 +42,7 @@ Living overview of the project for continuity across chats.
 
 ## Deployment
 - `Dockerfile` uses `python:3.10-slim`, installs build tools for `cryptography`, and runs `MainController.py`.
-- `Dockerfile` accepts `GIT_SHA` as a build arg and sets it as a runtime env var (currently unused by `/version`).
+- `Dockerfile` accepts `GIT_SHA` as a build arg and sets it as a runtime env var for `/version`.
 - `fly.toml` builds from the Dockerfile and defines a `bot` process.
 
 ## Repo map

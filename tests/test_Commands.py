@@ -94,23 +94,41 @@ class TestCommands(unittest.TestCase):
 
     def test_version(self):
         old_app = os.environ.get("APP_VERSION")
+        old_sha = os.environ.get("GIT_SHA")
+        old_source = os.environ.get("SOURCE_VERSION")
+        old_github = os.environ.get("GITHUB_SHA")
         try:
             os.environ["APP_VERSION"] = "v10"
+            os.environ["GIT_SHA"] = "81b1208"
+            os.environ.pop("SOURCE_VERSION", None)
+            os.environ.pop("GITHUB_SHA", None)
             self.updater.dispatcher.add_handler(CommandHandler("version", command_version))
             update = self.mg.get_message(text="/version", parse_mode="Markdown")
             self.updater.dispatcher.process_update(update)
             self.assertEqual(len(self.bot.sent_messages), 1)
             sent = self.bot.sent_messages[0]
-            self.assertEqual(sent['method'], "sendMessage")
-            self.assertIn("\u0646\u0633\u062e\u0647", sent['text'])
-            self.assertIn("v10", sent['text'])
-            self.assertNotIn("\n", sent['text'])
+            self.assertEqual(sent["method"], "sendMessage")
+            self.assertIn("\u0646\u0633\u062e\u0647", sent["text"])
+            self.assertIn("81b1208", sent["text"])
+            self.assertNotIn("v10", sent["text"])
+            self.assertNotIn("\n", sent["text"])
         finally:
             if old_app is None:
                 os.environ.pop("APP_VERSION", None)
             else:
                 os.environ["APP_VERSION"] = old_app
-
+            if old_sha is None:
+                os.environ.pop("GIT_SHA", None)
+            else:
+                os.environ["GIT_SHA"] = old_sha
+            if old_source is None:
+                os.environ.pop("SOURCE_VERSION", None)
+            else:
+                os.environ["SOURCE_VERSION"] = old_source
+            if old_github is None:
+                os.environ.pop("GITHUB_SHA", None)
+            else:
+                os.environ["GITHUB_SHA"] = old_github
 
     def test_board_when_there_is_no_game(self):
         self.updater.dispatcher.add_handler(CommandHandler("board", command_board))
