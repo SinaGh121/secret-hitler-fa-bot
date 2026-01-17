@@ -44,6 +44,7 @@ Living overview of the project for continuity across chats.
 - `Dockerfile` uses `python:3.10-slim`, installs build tools for `cryptography`, and runs `MainController.py`.
 - `Dockerfile` accepts `GIT_SHA` as a build arg and sets it as a runtime env var for `/version`.
 - `fly.toml` builds from the Dockerfile and defines a `bot` process.
+- GitHub Actions workflow `.github/workflows/fly-deploy.yml` deploys on pushes to `master` and injects `GIT_SHA` (requires `FLY_API_TOKEN`).
 
 ## Repo map
 - `README.md`: user-facing overview, contains encoding artifacts in this view.

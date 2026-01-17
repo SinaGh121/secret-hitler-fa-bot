@@ -122,3 +122,8 @@ Consequences: `/testboard` is inactive without deleting the implementation.
 Context: The user wants `/version` to show the running git version instead of manual env versioning.
 Decision: Read `GIT_SHA` (falling back to `SOURCE_VERSION` or `GITHUB_SHA`) and display the short SHA.
 Consequences: `/version` now reflects the deployed commit when SHA is injected at build or deploy time.
+
+## 2026-01-15 - Add GitHub Actions deploy workflow
+Context: The user wants Fly deployments to inject git SHA automatically.
+Decision: Add a GitHub Actions workflow that runs `flyctl deploy` with the `GIT_SHA` build arg.
+Consequences: Deploys from GitHub now include the commit SHA; requires `FLY_API_TOKEN` secret.
